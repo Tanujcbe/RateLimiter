@@ -30,13 +30,11 @@ public class RateLimitInterceptor implements HandlerInterceptor {
         if (clientId == null) clientId = "anonymous";
 
         String apiPath = request.getRequestURI();
-        String strategy = "token_bucket"; // For now, hardcoded
-        RateLimitConfig config = configService.getConfig(apiPath);
+        String strategy = "token_bucket"; // TODO
 
-        String key = "rate:" + clientId + ":" + apiPath;
         RateLimitingStrategy limiter = strategyResolver.resolve(strategy);
 
-        if (!limiter.isAllowed(key,config)) {
+        if (!limiter.isAllowed(clientId,apiPath)) {
             response.setStatus(429);
             response.getWriter().write("Rate limit exceeded");
             return false;

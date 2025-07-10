@@ -2,6 +2,8 @@ package com.project.RateLimiter.config;
 
 import com.project.RateLimiter.dto.RateLimitConfig;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
@@ -9,13 +11,34 @@ import java.util.Map;
 @Slf4j
 @Service
 public class RateLimitConfigService {
-    private final Map<String, RateLimitConfig> apiConfigMap = Map.of(
+
+    private final Map<String, RateLimitConfig> fallbackMap = Map.of(
             "/ping", new RateLimitConfig(10, 1, 60000)
     );
 
-    public RateLimitConfig getConfig(String apiPath) {
-        RateLimitConfig config = apiConfigMap.getOrDefault(apiPath, new RateLimitConfig(5, 1, 60000));
-        log.debug("Fetched rate limit config for path {}: {}", apiPath, config);
-        return config;
+    @Autowired
+    private StringRedisTemplate redisTemplate;
+
+    public RateLimitConfig getConfig(String clientId, String apiPath) {
+        String redisKey = String.format("rate:%s:%s", clientId, apiPath);
+        Map<Object, Object> configMap = redisTemplate.opsForHash().entries(redisKey);
+
+        if (configMap.isEmpty()) {
+            log.warn("No Redis config found for key {}, falling back", redisKey);
+            return fallbackMap.getOrDefault(apiPath, new RateLimitConfig(5, 1, 60000));
+        }
+
+        try {
+            int maxTokens = Integer.parseInt((String) configMap.getOrDefault("maxTokens", "5"));
+            int refillRate = Integer.parseInt((String) configMap.getOrDefault("refillRate", "1"));
+            int intervalMs = Integer.parseInt((String) configMap.getOrDefault("refillIntervalMs", "60000"));
+            RateLimitConfig config = new RateLimitConfig(maxTokens, refillRate, intervalMs);
+            log.debug("Loaded dynamic rate config from Redis for key {}: {}", redisKey, config);
+            return config;
+        } catch (Exception e) {
+            log.error("Invalid rate limit config in Redis for key {}: {}, falling back", redisKey, e.getMessage());
+            return fallbackMap.getOrDefault(apiPath, new RateLimitConfig(5, 1, 60000));
+        }
     }
 }
+

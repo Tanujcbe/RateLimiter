@@ -1,5 +1,6 @@
 package com.project.RateLimiter.strategy;
 
+import com.project.RateLimiter.config.RateLimitConfigService;
 import com.project.RateLimiter.dto.RateLimitConfig;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
@@ -19,12 +20,13 @@ public class TokenBucketStrategy implements RateLimitingStrategy {
 
 
     private final StringRedisTemplate redisTemplate;
-
+    private final RateLimitConfigService rateLimitConfigService;
 
     private String luaScript;
 
-    public TokenBucketStrategy(StringRedisTemplate redisTemplate) {
+    public TokenBucketStrategy(StringRedisTemplate redisTemplate, RateLimitConfigService rateLimitConfigService) {
         this.redisTemplate = redisTemplate;
+        this.rateLimitConfigService = rateLimitConfigService;
     }
 
     @PostConstruct
@@ -40,10 +42,12 @@ public class TokenBucketStrategy implements RateLimitingStrategy {
     }
 
     /**
-     * @param redisKey like "user123"
-     * @param config Runtime config: maxTokens, refillRate, intervalMs
+     * @param clientId like "user123"
+     * @param apiPath like "/test"
      */
-    public boolean isAllowed(String redisKey, RateLimitConfig config) {
+    public boolean isAllowed(String clientId,String apiPath) {
+        String redisKey = String.format("rate:%s:%s", clientId, apiPath);
+        RateLimitConfig config = rateLimitConfigService.getConfig(clientId,apiPath);
         log.debug("Checking rate limit for key: {}, config: {}", redisKey, config);
         DefaultRedisScript<Long> script = new DefaultRedisScript<>();
         script.setScriptText(luaScript);

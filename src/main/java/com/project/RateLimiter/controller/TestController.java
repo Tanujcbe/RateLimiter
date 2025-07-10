@@ -1,14 +1,20 @@
 package com.project.RateLimiter.controller;
 
-import org.springframework.stereotype.Controller;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@Controller
+@Slf4j
 @RestController
 public class TestController {
     @GetMapping("/test")
     public String test() {
+        log.info("/test endpoint hit");
         return "Hello World";
+    }
+    @GetMapping("/ping")
+    public String ping() {
+        log.info("/ping endpoint hit");
+        return "pong";
     }
 }

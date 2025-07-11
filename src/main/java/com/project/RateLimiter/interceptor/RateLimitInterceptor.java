@@ -35,6 +35,15 @@ public class RateLimitInterceptor implements HandlerInterceptor {
         RateLimitingStrategy limiter = strategyResolver.resolve(strategy);
 
         if (!limiter.isAllowed(clientId,apiPath)) {
+            RateLimitConfig config = configService.getConfig(clientId, apiPath);
+            log.warn("THROTTLED REQUEST: clientId={}, apiPath={}, method={}, remoteAddr={}, config={}, timestamp={}",
+                    clientId,
+                    apiPath,
+                    request.getMethod(),
+                    request.getRemoteAddr(),
+                    config,
+                    System.currentTimeMillis()
+            );
             response.setStatus(429);
             response.getWriter().write("Rate limit exceeded");
             return false;

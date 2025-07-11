@@ -64,7 +64,8 @@ public class TokenBucketStrategy implements RateLimitingStrategy {
                     String.valueOf(config.getMaxTokens()),
                     String.valueOf(config.getRefillRate()),
                     String.valueOf(config.getRefillIntervalMs()),
-                    String.valueOf(now)
+                    String.valueOf(now),
+                    String.valueOf(config.getGraceLimit())
             );
             boolean allowed = result == 1L;
             log.info("Rate limit check for key {}: {}", redisKey, allowed ? "ALLOWED" : "DENIED");
@@ -74,7 +75,7 @@ public class TokenBucketStrategy implements RateLimitingStrategy {
             // In-memory fallback
             InMemoryTokenBucket bucket = fallbackBuckets.computeIfAbsent(redisKey, k ->
                 new InMemoryTokenBucket(
-                    config.getMaxTokens(),
+                    config.getMaxTokens() + config.getGraceLimit(),
                     config.getRefillRate(),
                     config.getRefillIntervalMs()
                 )

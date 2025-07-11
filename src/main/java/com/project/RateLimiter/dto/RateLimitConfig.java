@@ -11,5 +11,6 @@ public class RateLimitConfig {
     private int maxTokens;
     private int refillRate;
     private int refillIntervalMs;
+    private int graceLimit;
 
 }

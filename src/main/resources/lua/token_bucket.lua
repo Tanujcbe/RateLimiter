@@ -3,12 +3,15 @@
 -- ARGV[2] = refill_rate (tokens added per interval, e.g., 1)
 -- ARGV[3] = refill_interval_ms (e.g., 1000ms = 1 second)
 -- ARGV[4] = current_timestamp in ms (from Java)
+-- ARGV[5] = grace_limit (additional burst tokens)
 
 local key = KEYS[1]
 local max_tokens = tonumber(ARGV[1])
 local refill_rate = tonumber(ARGV[2])
 local interval_ms = tonumber(ARGV[3])
 local now = tonumber(ARGV[4]) -- Use the passed timestamp!
+local grace_limit = tonumber(ARGV[5]) or 0
+local bucket_capacity = max_tokens + grace_limit
 
 redis.log(redis.LOG_NOTICE, "[TokenBucket] Start: key=" .. tostring(key) .. ", max_tokens=" .. tostring(max_tokens) .. ", refill_rate=" .. tostring(refill_rate) .. ", interval_ms=" .. tostring(interval_ms) .. ", now=" .. tostring(now))
 
@@ -20,7 +23,7 @@ end
 
 -- Read existing values or default
 local data = redis.call("HMGET", key, "tokens", "last_refill")
-local tokens = tonumber(data[1]) or max_tokens
+local tokens = tonumber(data[1]) or bucket_capacity
 local last_refill = tonumber(data[2]) or now
 
 redis.log(redis.LOG_NOTICE, "[TokenBucket] Before refill: tokens=" .. tostring(tokens) .. ", last_refill=" .. tostring(last_refill))
@@ -28,7 +31,7 @@ redis.log(redis.LOG_NOTICE, "[TokenBucket] Before refill: tokens=" .. tostring(t
 -- Calculate how much to refill
 local delta = now - last_refill
 local refill = math.floor(delta / interval_ms) * refill_rate
-tokens = math.min(max_tokens, tokens + refill)
+tokens = math.min(bucket_capacity, tokens + refill)
 
 redis.log(redis.LOG_NOTICE, "[TokenBucket] After refill: tokens=" .. tostring(tokens) .. ", refill=" .. tostring(refill) .. ", delta=" .. tostring(delta))
 

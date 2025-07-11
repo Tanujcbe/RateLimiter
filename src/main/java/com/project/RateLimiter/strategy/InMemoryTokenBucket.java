@@ -10,11 +10,11 @@ public class InMemoryTokenBucket {
     private long lastRefillTimestamp;
     private final Object lock = new Object();
 
-    public InMemoryTokenBucket(long maxTokens, long refillRate, long refillIntervalMs) {
-        this.maxTokens = maxTokens;
+    public InMemoryTokenBucket(long maxTokensWithGrace, long refillRate, long refillIntervalMs) {
+        this.maxTokens = maxTokensWithGrace;
         this.refillRate = refillRate;
         this.refillIntervalMs = refillIntervalMs;
-        this.tokens = maxTokens;
+        this.tokens = maxTokensWithGrace;
         this.lastRefillTimestamp = System.currentTimeMillis();
     }
 

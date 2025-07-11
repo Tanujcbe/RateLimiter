@@ -13,6 +13,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Component("token_bucket")
@@ -23,6 +24,8 @@ public class TokenBucketStrategy implements RateLimitingStrategy {
     private final RateLimitConfigService rateLimitConfigService;
 
     private String luaScript;
+
+    private final ConcurrentHashMap<String, InMemoryTokenBucket> fallbackBuckets = new ConcurrentHashMap<>();
 
     public TokenBucketStrategy(StringRedisTemplate redisTemplate, RateLimitConfigService rateLimitConfigService) {
         this.redisTemplate = redisTemplate;
@@ -67,9 +70,18 @@ public class TokenBucketStrategy implements RateLimitingStrategy {
             log.info("Rate limit check for key {}: {}", redisKey, allowed ? "ALLOWED" : "DENIED");
             return allowed;
         } catch (Exception e) {
-            log.error("Error executing rate limit script for key {}", redisKey, e);
-            // Fail open or closed? Here, fail closed (deny request)
-            return false;
+            log.error("Error executing rate limit script for key {}. Falling back to in-memory bucket.", redisKey, e);
+            // In-memory fallback
+            InMemoryTokenBucket bucket = fallbackBuckets.computeIfAbsent(redisKey, k ->
+                new InMemoryTokenBucket(
+                    config.getMaxTokens(),
+                    config.getRefillRate(),
+                    config.getRefillIntervalMs()
+                )
+            );
+            boolean allowed = bucket.isAllowed();
+            log.info("[Fallback] Rate limit check for key {}: {}", redisKey, allowed ? "ALLOWED" : "DENIED");
+            return allowed;
         }
     }
 }

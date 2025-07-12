@@ -106,14 +106,6 @@ for i in {1..10}; do
 done
 ```
 
-### Automated Testing
-```bash
-# Run test script
-./test_rate_limiter.sh
-
-# Run unit tests
-mvn test
-```
 
 ## 🔧 Technical Implementation
 

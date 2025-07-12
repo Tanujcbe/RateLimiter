@@ -2,6 +2,7 @@ package com.project.RateLimiter.strategy;
 
 import com.project.RateLimiter.config.RateLimitConfigService;
 import com.project.RateLimiter.dto.RateLimitConfig;
+import com.project.RateLimiter.util.KeyGenerator;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -14,6 +15,7 @@ import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import jakarta.servlet.http.HttpServletRequest;
 
 @Slf4j
 @Component("token_bucket")
@@ -45,12 +47,11 @@ public class TokenBucketStrategy implements RateLimitingStrategy {
     }
 
     /**
-     * @param clientId like "user123"
-     * @param apiPath like "/test"
+     * @param request like userRequest
      */
-    public boolean isAllowed(String clientId,String apiPath) {
-        String redisKey = String.format("rate:%s:%s", clientId, apiPath);
-        RateLimitConfig config = rateLimitConfigService.getConfig(clientId,apiPath);
+    public boolean isAllowed(HttpServletRequest request) {
+        String redisKey = KeyGenerator.generateKey(request);
+        RateLimitConfig config = rateLimitConfigService.getConfig(request);
         log.debug("Checking rate limit for key: {}, config: {}", redisKey, config);
         DefaultRedisScript<Long> script = new DefaultRedisScript<>();
         script.setScriptText(luaScript);

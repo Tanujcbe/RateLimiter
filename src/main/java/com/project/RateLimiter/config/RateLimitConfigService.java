@@ -1,11 +1,13 @@
 package com.project.RateLimiter.config;
 
 import com.project.RateLimiter.dto.RateLimitConfig;
+import com.project.RateLimiter.util.KeyGenerator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
 
 @Slf4j
@@ -19,10 +21,11 @@ public class RateLimitConfigService {
     @Autowired
     private StringRedisTemplate redisTemplate;
 
-    public RateLimitConfig getConfig(String clientId, String apiPath) {
-        String redisKey = String.format("rate:%s:%s", clientId, apiPath);
+    public RateLimitConfig getConfig(HttpServletRequest request) {
+        String redisKey = KeyGenerator.generateKey(request);
         Map<Object, Object> configMap = redisTemplate.opsForHash().entries(redisKey);
 
+        String apiPath = request.getRequestURI();
         if (configMap.isEmpty()) {
             log.warn("No Redis config found for key {}, falling back", redisKey);
             return fallbackMap.getOrDefault(apiPath, new RateLimitConfig(5, 1, 60000, 2));

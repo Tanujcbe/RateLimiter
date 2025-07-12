@@ -12,6 +12,10 @@ public class TestController {
         log.info("/test endpoint hit");
         return "Hello World";
     }
+    @GetMapping("/apiTest")
+    public String apiTest() {
+        return "{Status : UP}";
+    }
     @GetMapping("/ping")
     public String ping() {
         log.info("/ping endpoint hit");

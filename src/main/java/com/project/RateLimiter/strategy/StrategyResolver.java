@@ -9,6 +9,8 @@
     import java.util.List;
     import java.util.Map;
     import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+    import com.project.RateLimiter.util.KeyGenerator;
+    import jakarta.servlet.http.HttpServletRequest;
 
     @Slf4j
     @Component
@@ -24,8 +26,8 @@
         private final RateLimitingStrategy inMemoryStrategy = new RateLimitingStrategy() {
             private final java.util.concurrent.ConcurrentHashMap<String, com.project.RateLimiter.strategy.InMemoryTokenBucket> buckets = new java.util.concurrent.ConcurrentHashMap<>();
             @Override
-            public boolean isAllowed(String clientId, String apiPath) {
-                String key = "rate:" + clientId + ":" + apiPath;
+            public boolean isAllowed(HttpServletRequest request) {
+                String key = KeyGenerator.generateKey(request);
                 // Use default values or fetch config as needed
                 com.project.RateLimiter.strategy.InMemoryTokenBucket bucket = buckets.computeIfAbsent(key, k -> new com.project.RateLimiter.strategy.InMemoryTokenBucket(10, 1, 10000));
                 return bucket.isAllowed();
@@ -49,12 +51,12 @@
                 log.warn("Circuit breaker OPEN. Using in-memory fallback strategy.");
                 return inMemoryStrategy;
             }
-            return (clientId, apiPath) -> {
+            return request -> {
                 try {
-                    return redisCircuitBreaker.executeSupplier(() -> redisStrategy.isAllowed(clientId, apiPath));
+                    return redisCircuitBreaker.executeSupplier(() -> redisStrategy.isAllowed(request));
                 } catch (Exception e) {
                     log.warn("Redis unavailable, falling back to in-memory rate limiting: {}", e.getMessage());
-                    return inMemoryStrategy.isAllowed(clientId, apiPath);
+                    return inMemoryStrategy.isAllowed(request);
                 }
             };
         }

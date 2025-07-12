@@ -87,31 +87,4 @@ public class TestController {
         response.put("service", "RateLimiter");
         return ResponseEntity.ok(response);
     }
-    
-    // Rate limit status endpoint
-    @GetMapping("/rate-limit/status")
-    public ResponseEntity<Map<String, Object>> rateLimitStatus() {
-        Map<String, Object> response = new HashMap<>();
-        response.put("message", "Rate Limiter Status");
-        response.put("timestamp", LocalDateTime.now());
-        response.put("features", Map.of(
-            "interceptor_based", true,
-            "aop_based", true,
-            "grace_tokens", true,
-            "redis_fallback", true
-        ));
-        return ResponseEntity.ok(response);
-    }
-    
-    // Test endpoint for exception handling
-    @RateLimit(capacity = 1, refillTokensPerSecond = 1, grace = 0)
-    @GetMapping("/aop/exception-test")
-    public ResponseEntity<Map<String, Object>> exceptionTest() {
-        Map<String, Object> response = new HashMap<>();
-        response.put("message", "Exception Test Endpoint");
-        response.put("timestamp", LocalDateTime.now());
-        response.put("status", "success");
-        log.info("AOP exception test endpoint hit");
-        return ResponseEntity.ok(response);
-    }
 }

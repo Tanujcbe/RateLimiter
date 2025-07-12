@@ -10,6 +10,8 @@
     import java.util.Map;
     import io.github.resilience4j.circuitbreaker.CircuitBreaker;
     import com.project.RateLimiter.util.KeyGenerator;
+    import com.project.RateLimiter.config.RateLimitConfigService;
+    import com.project.RateLimiter.dto.RateLimitConfig;
     import jakarta.servlet.http.HttpServletRequest;
 
     @Slf4j
@@ -22,14 +24,25 @@
         @Qualifier("token_bucket")
         private RateLimitingStrategy redisStrategy;
 
+        @Autowired
+        private RateLimitConfigService configService;
+
         // InMemoryTokenBucket is not a RateLimitingStrategy, so we wrap it
         private final RateLimitingStrategy inMemoryStrategy = new RateLimitingStrategy() {
             private final java.util.concurrent.ConcurrentHashMap<String, com.project.RateLimiter.strategy.InMemoryTokenBucket> buckets = new java.util.concurrent.ConcurrentHashMap<>();
             @Override
             public boolean isAllowed(HttpServletRequest request) {
                 String key = KeyGenerator.generateKey(request);
-                // Use default values or fetch config as needed
-                com.project.RateLimiter.strategy.InMemoryTokenBucket bucket = buckets.computeIfAbsent(key, k -> new com.project.RateLimiter.strategy.InMemoryTokenBucket(10, 1, 10000));
+                // Get configuration from config service
+                RateLimitConfig config = configService.getConfig(request);
+                com.project.RateLimiter.strategy.InMemoryTokenBucket bucket = buckets.computeIfAbsent(key, k -> 
+                    new com.project.RateLimiter.strategy.InMemoryTokenBucket(
+                        config.getMaxTokens(), 
+                        config.getGraceLimit(), 
+                        config.getRefillRate(), 
+                        config.getRefillIntervalMs()
+                    )
+                );
                 return bucket.isAllowed();
             }
         };
